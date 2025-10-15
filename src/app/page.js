@@ -49,7 +49,6 @@ export default function SnakeGame() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw snake
-      ctx.fillStyle = '#0f0';
       gameState.snake.forEach((segment, index) => {
         if (index === 0) {
           ctx.fillStyle = '#0f0';
