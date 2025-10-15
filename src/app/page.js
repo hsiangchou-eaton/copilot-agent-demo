@@ -86,46 +86,150 @@ export default function SnakeGame() {
 
     // Draw game
     const draw = () => {
-      // Clear canvas
-      ctx.fillStyle = '#000';
+      // Clear canvas with dark gradient background
+      const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      bgGradient.addColorStop(0, '#0f0f23');
+      bgGradient.addColorStop(1, '#1a1a2e');
+      ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw snake
+      // Add subtle grid pattern
+      ctx.strokeStyle = 'rgba(100, 100, 200, 0.1)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= GRID_SIZE; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * CELL_SIZE, 0);
+        ctx.lineTo(i * CELL_SIZE, canvas.height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * CELL_SIZE);
+        ctx.lineTo(canvas.width, i * CELL_SIZE);
+        ctx.stroke();
+      }
+
+      // Draw snake with gradient and glow
       gameState.snake.forEach((segment, index) => {
+        const x = segment.x * CELL_SIZE;
+        const y = segment.y * CELL_SIZE;
+        const size = CELL_SIZE - 2;
+        
+        // Create gradient for snake
+        const gradient = ctx.createLinearGradient(x, y, x + size, y + size);
         if (index === 0) {
-          ctx.fillStyle = '#0f0';
+          // Head - brighter gradient
+          gradient.addColorStop(0, '#00ff88');
+          gradient.addColorStop(1, '#00d4ff');
+          
+          // Add glow effect for head
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = '#00ff88';
         } else {
-          ctx.fillStyle = '#0a0';
+          // Body - gradient based on position
+          const colorIntensity = 1 - (index / gameState.snake.length) * 0.5;
+          gradient.addColorStop(0, `rgba(0, 255, 136, ${colorIntensity})`);
+          gradient.addColorStop(1, `rgba(0, 212, 255, ${colorIntensity})`);
+          
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = '#00ff88';
         }
-        ctx.fillRect(
-          segment.x * CELL_SIZE,
-          segment.y * CELL_SIZE,
-          CELL_SIZE - 1,
-          CELL_SIZE - 1
-        );
+        
+        ctx.fillStyle = gradient;
+        
+        // Draw rounded rectangle
+        const radius = 4;
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + size - radius, y);
+        ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+        ctx.lineTo(x + size, y + size - radius);
+        ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+        ctx.lineTo(x + radius, y + size);
+        ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.shadowBlur = 0;
       });
 
-      // Draw food
-      ctx.fillStyle = '#f00';
-      ctx.fillRect(
-        gameState.food.x * CELL_SIZE,
-        gameState.food.y * CELL_SIZE,
-        CELL_SIZE - 1,
-        CELL_SIZE - 1
+      // Draw food with pulsing glow effect
+      const foodX = gameState.food.x * CELL_SIZE;
+      const foodY = gameState.food.y * CELL_SIZE;
+      const foodSize = CELL_SIZE - 2;
+      const pulseTime = Date.now() / 500;
+      const pulseScale = 1 + Math.sin(pulseTime) * 0.15;
+      
+      // Outer glow
+      const glowGradient = ctx.createRadialGradient(
+        foodX + foodSize / 2, foodY + foodSize / 2, 0,
+        foodX + foodSize / 2, foodY + foodSize / 2, foodSize * pulseScale
       );
+      glowGradient.addColorStop(0, 'rgba(255, 100, 150, 0.8)');
+      glowGradient.addColorStop(0.5, 'rgba(255, 50, 100, 0.4)');
+      glowGradient.addColorStop(1, 'rgba(255, 0, 100, 0)');
+      
+      ctx.fillStyle = glowGradient;
+      ctx.beginPath();
+      ctx.arc(
+        foodX + foodSize / 2,
+        foodY + foodSize / 2,
+        foodSize * pulseScale,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      
+      // Inner food with gradient
+      const foodGradient = ctx.createRadialGradient(
+        foodX + foodSize / 2, foodY + foodSize / 2, 0,
+        foodX + foodSize / 2, foodY + foodSize / 2, foodSize / 2
+      );
+      foodGradient.addColorStop(0, '#ff6b9d');
+      foodGradient.addColorStop(1, '#c94b7a');
+      
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#ff0066';
+      ctx.fillStyle = foodGradient;
+      ctx.beginPath();
+      ctx.arc(
+        foodX + foodSize / 2,
+        foodY + foodSize / 2,
+        foodSize / 2 - 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      ctx.shadowBlur = 0;
 
-      // Draw game over message
+      // Draw game over overlay
       if (gameState.gameOver) {
-        ctx.fillStyle = '#fff';
-        ctx.font = '30px Arial';
+        // Semi-transparent backdrop
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Game Over text with gradient
+        const textGradient = ctx.createLinearGradient(0, canvas.height / 2 - 40, canvas.width, canvas.height / 2 - 40);
+        textGradient.addColorStop(0, '#ff6b9d');
+        textGradient.addColorStop(0.5, '#00d4ff');
+        textGradient.addColorStop(1, '#00ff88');
+        
+        ctx.fillStyle = textGradient;
+        ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2 - 20);
-        ctx.font = '20px Arial';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#00d4ff';
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+        
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px system-ui, -apple-system, sans-serif';
         ctx.fillText(
-          'Press Space to Restart',
+          'Press SPACE to restart',
           canvas.width / 2,
-          canvas.height / 2 + 20
+          canvas.height / 2 + 30
         );
+        ctx.shadowBlur = 0;
       }
     };
 
@@ -248,95 +352,156 @@ export default function SnakeGame() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        backgroundColor: '#111',
+        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
         color: '#fff',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '20px',
       }}
     >
-      <h1 style={{ marginBottom: '20px' }}>Snake Game</h1>
+      <h1 style={{ 
+        marginBottom: '30px',
+        fontSize: '48px',
+        fontWeight: '800',
+        background: 'linear-gradient(135deg, #00ff88, #00d4ff, #ff6b9d)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        textShadow: '0 0 40px rgba(0, 212, 255, 0.3)',
+        letterSpacing: '2px',
+      }}>
+        SNAKE
+      </h1>
       
       {!gameStarted ? (
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ marginBottom: '20px' }}>Select Difficulty</h2>
-          <div style={{ marginBottom: '20px' }}>
-            <button
-              onClick={() => {
-                setDifficulty('easy');
-                startGame();
-              }}
-              style={{
-                padding: '10px 20px',
-                margin: '0 10px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                backgroundColor: difficulty === 'easy' ? '#0f0' : '#333',
-                color: '#fff',
-                border: '2px solid #fff',
-                borderRadius: '5px',
-              }}
-            >
-              Easy
-            </button>
-            <button
-              onClick={() => {
-                setDifficulty('medium');
-                startGame();
-              }}
-              style={{
-                padding: '10px 20px',
-                margin: '0 10px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                backgroundColor: difficulty === 'medium' ? '#0f0' : '#333',
-                color: '#fff',
-                border: '2px solid #fff',
-                borderRadius: '5px',
-              }}
-            >
-              Medium
-            </button>
-            <button
-              onClick={() => {
-                setDifficulty('hard');
-                startGame();
-              }}
-              style={{
-                padding: '10px 20px',
-                margin: '0 10px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                backgroundColor: difficulty === 'hard' ? '#0f0' : '#333',
-                color: '#fff',
-                border: '2px solid #fff',
-                borderRadius: '5px',
-              }}
-            >
-              Hard
-            </button>
+        <div style={{ 
+          textAlign: 'center',
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '24px',
+          padding: '40px 60px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        }}>
+          <h2 style={{ 
+            marginBottom: '30px',
+            fontSize: '24px',
+            fontWeight: '600',
+            color: '#00d4ff',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+          }}>
+            Select Difficulty
+          </h2>
+          <div style={{ marginBottom: '30px', display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {['easy', 'medium', 'hard'].map((level) => (
+              <button
+                key={level}
+                onClick={() => {
+                  setDifficulty(level);
+                  startGame();
+                }}
+                style={{
+                  padding: '14px 32px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  background: difficulty === level 
+                    ? 'linear-gradient(135deg, #00ff88, #00d4ff)' 
+                    : 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: difficulty === level 
+                    ? 'none' 
+                    : '2px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: difficulty === level 
+                    ? '0 4px 20px rgba(0, 255, 136, 0.4)' 
+                    : '0 4px 12px rgba(0, 0, 0, 0.2)',
+                }}
+                onMouseEnter={(e) => {
+                  if (difficulty !== level) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.15)';
+                    e.target.style.borderColor = 'rgba(0, 212, 255, 0.5)';
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 16px rgba(0, 212, 255, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (difficulty !== level) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+                  }
+                }}
+              >
+                {level}
+              </button>
+            ))}
           </div>
-          <div style={{ marginTop: '20px', fontSize: '18px' }}>
-            High Score: {highScore}
+          <div style={{ 
+            marginTop: '30px', 
+            fontSize: '20px',
+            fontWeight: '600',
+            padding: '16px 24px',
+            background: 'rgba(0, 212, 255, 0.1)',
+            borderRadius: '12px',
+            border: '1px solid rgba(0, 212, 255, 0.3)',
+          }}>
+            🏆 High Score: <span style={{ color: '#00ff88' }}>{highScore}</span>
           </div>
         </div>
       ) : (
         <>
-          <div style={{ marginBottom: '10px', fontSize: '20px', display: 'flex', gap: '30px' }}>
-            <span>Score: {score}</span>
-            <span>High Score: {highScore}</span>
+          <div style={{ 
+            marginBottom: '20px', 
+            fontSize: '20px', 
+            display: 'flex', 
+            gap: '30px',
+            fontWeight: '600',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            padding: '16px 32px',
+            borderRadius: '16px',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          }}>
+            <span style={{ color: '#00ff88' }}>Score: {score}</span>
+            <span style={{ color: '#00d4ff' }}>High Score: {highScore}</span>
           </div>
           <canvas
             ref={canvasRef}
             width={GRID_SIZE * CELL_SIZE}
             height={GRID_SIZE * CELL_SIZE}
             style={{
-              border: '2px solid #fff',
-              backgroundColor: '#000',
+              border: '3px solid rgba(0, 212, 255, 0.3)',
+              backgroundColor: '#0f0f23',
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(0, 212, 255, 0.2), inset 0 0 40px rgba(0, 0, 0, 0.5)',
             }}
           />
-          <div style={{ marginTop: '20px', textAlign: 'center' }}>
-            <p>Use arrow keys to move</p>
-            <p>Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</p>
-            {gameOver && <p>Press Space to restart</p>}
+          <div style={{ 
+            marginTop: '24px', 
+            textAlign: 'center',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.7)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          }}>
+            <p style={{ marginBottom: '8px' }}>⌨️ Use arrow keys to move</p>
+            <p style={{ marginBottom: '8px' }}>
+              Difficulty: <span style={{ 
+                color: '#00d4ff', 
+                fontWeight: '600',
+                textTransform: 'uppercase',
+              }}>
+                {difficulty}
+              </span>
+            </p>
+            {gameOver && <p style={{ color: '#ff6b9d', fontWeight: '600', marginTop: '12px', fontSize: '16px' }}>Press SPACE to restart</p>}
           </div>
         </>
       )}
