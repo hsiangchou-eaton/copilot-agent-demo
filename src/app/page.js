@@ -6,6 +6,9 @@ export default function SnakeGame() {
   const canvasRef = useRef(null);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [highScore, setHighScore] = useState(0);
+  const [difficulty, setDifficulty] = useState('medium');
+  const [gameStarted, setGameStarted] = useState(false);
   const gameStateRef = useRef({
     snake: [{ x: 10, y: 10 }],
     food: { x: 15, y: 15 },
@@ -17,9 +20,50 @@ export default function SnakeGame() {
 
   const GRID_SIZE = 20;
   const CELL_SIZE = 20;
-  const GAME_SPEED = 100;
+  
+  // Difficulty level speeds (in milliseconds)
+  const DIFFICULTY_SPEEDS = {
+    easy: 150,
+    medium: 100,
+    hard: 50,
+  };
+
+  const GAME_SPEED = DIFFICULTY_SPEEDS[difficulty];
+
+  // Update high score if current score is higher
+  const updateHighScore = (currentScore) => {
+    if (currentScore > highScore) {
+      setHighScore(currentScore);
+      localStorage.setItem('snakeHighScore', currentScore.toString());
+    }
+  };
+
+  // Start the game
+  const startGame = () => {
+    setGameStarted(true);
+    setGameOver(false);
+    setScore(0);
+    gameStateRef.current = {
+      snake: [{ x: 10, y: 10 }],
+      food: { x: 15, y: 15 },
+      direction: { x: 1, y: 0 },
+      nextDirection: { x: 1, y: 0 },
+      score: 0,
+      gameOver: false,
+    };
+  };
+
+  // Load high score from localStorage on mount
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem('snakeHighScore');
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
 
   useEffect(() => {
+    if (!gameStarted) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -113,6 +157,7 @@ export default function SnakeGame() {
       ) {
         gameState.gameOver = true;
         setGameOver(true);
+        updateHighScore(gameState.score);
         draw();
         return;
       }
@@ -125,6 +170,7 @@ export default function SnakeGame() {
       ) {
         gameState.gameOver = true;
         setGameOver(true);
+        updateHighScore(gameState.score);
         draw();
         return;
       }
@@ -150,15 +196,16 @@ export default function SnakeGame() {
       const key = e.key;
 
       if (gameState.gameOver && key === ' ') {
-        // Restart game
+        // Restart game - go back to difficulty selection
+        setGameStarted(false);
+        setGameOver(false);
+        setScore(0);
         gameState.snake = [{ x: 10, y: 10 }];
         gameState.food = generateFood();
         gameState.direction = { x: 1, y: 0 };
         gameState.nextDirection = { x: 1, y: 0 };
         gameState.score = 0;
         gameState.gameOver = false;
-        setScore(0);
-        setGameOver(false);
         e.preventDefault();
         return;
       }
@@ -193,7 +240,7 @@ export default function SnakeGame() {
       clearInterval(intervalId);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [gameStarted, difficulty]);
 
   return (
     <div
@@ -209,22 +256,92 @@ export default function SnakeGame() {
       }}
     >
       <h1 style={{ marginBottom: '20px' }}>Snake Game</h1>
-      <div style={{ marginBottom: '10px', fontSize: '20px' }}>
-        Score: {score}
-      </div>
-      <canvas
-        ref={canvasRef}
-        width={GRID_SIZE * CELL_SIZE}
-        height={GRID_SIZE * CELL_SIZE}
-        style={{
-          border: '2px solid #fff',
-          backgroundColor: '#000',
-        }}
-      />
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <p>Use arrow keys to move</p>
-        {gameOver && <p>Press Space to restart</p>}
-      </div>
+      
+      {!gameStarted ? (
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ marginBottom: '20px' }}>Select Difficulty</h2>
+          <div style={{ marginBottom: '20px' }}>
+            <button
+              onClick={() => {
+                setDifficulty('easy');
+                startGame();
+              }}
+              style={{
+                padding: '10px 20px',
+                margin: '0 10px',
+                fontSize: '16px',
+                cursor: 'pointer',
+                backgroundColor: difficulty === 'easy' ? '#0f0' : '#333',
+                color: '#fff',
+                border: '2px solid #fff',
+                borderRadius: '5px',
+              }}
+            >
+              Easy
+            </button>
+            <button
+              onClick={() => {
+                setDifficulty('medium');
+                startGame();
+              }}
+              style={{
+                padding: '10px 20px',
+                margin: '0 10px',
+                fontSize: '16px',
+                cursor: 'pointer',
+                backgroundColor: difficulty === 'medium' ? '#0f0' : '#333',
+                color: '#fff',
+                border: '2px solid #fff',
+                borderRadius: '5px',
+              }}
+            >
+              Medium
+            </button>
+            <button
+              onClick={() => {
+                setDifficulty('hard');
+                startGame();
+              }}
+              style={{
+                padding: '10px 20px',
+                margin: '0 10px',
+                fontSize: '16px',
+                cursor: 'pointer',
+                backgroundColor: difficulty === 'hard' ? '#0f0' : '#333',
+                color: '#fff',
+                border: '2px solid #fff',
+                borderRadius: '5px',
+              }}
+            >
+              Hard
+            </button>
+          </div>
+          <div style={{ marginTop: '20px', fontSize: '18px' }}>
+            High Score: {highScore}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ marginBottom: '10px', fontSize: '20px', display: 'flex', gap: '30px' }}>
+            <span>Score: {score}</span>
+            <span>High Score: {highScore}</span>
+          </div>
+          <canvas
+            ref={canvasRef}
+            width={GRID_SIZE * CELL_SIZE}
+            height={GRID_SIZE * CELL_SIZE}
+            style={{
+              border: '2px solid #fff',
+              backgroundColor: '#000',
+            }}
+          />
+          <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <p>Use arrow keys to move</p>
+            <p>Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</p>
+            {gameOver && <p>Press Space to restart</p>}
+          </div>
+        </>
+      )}
     </div>
   );
 }
