@@ -28,8 +28,6 @@ export default function SnakeGame() {
     hard: 50,
   };
 
-  const GAME_SPEED = DIFFICULTY_SPEEDS[difficulty];
-
   // Update high score if current score is higher
   const updateHighScore = (currentScore) => {
     if (currentScore > highScore) {
@@ -231,7 +229,7 @@ export default function SnakeGame() {
     window.addEventListener('keydown', handleKeyDown);
 
     // Start game loop
-    const intervalId = setInterval(gameLoop, GAME_SPEED);
+    const intervalId = setInterval(gameLoop, DIFFICULTY_SPEEDS[difficulty]);
 
     // Initial draw
     draw();
